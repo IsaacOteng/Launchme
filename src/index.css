@@ -1,28 +1,97 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --font-heading: system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", "SF Mono", "Roboto Mono", ui-monospace, monospace;
 }
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-html,
-body,
-#root {
-  min-height: 100svh;
+html {
+  background: #000;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: #0b0b10;
-  color: #f3f4f6;
+  background: #000;
+  color: #fff;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
 }
+
+/* Each stage is exactly one viewport, so the page advances a whole scene at a
+   time rather than parking between two. Snapping lives on the scroll container
+   (html), not body, or Safari ignores it. */
+html {
+  scroll-snap-type: y mandatory;
+}
+
+/* Stage transitions that pin and scrub will be taller than a viewport, at
+   which point mandatory snapping has to give way — set `scroll-snap-align:
+   none` on those sections rather than removing this. */
+
+/* Optical falloff. Keeps the plate from ending in a hard rectangle and pulls
+   the eye to the centre of the composition. */
+.stage-vignette {
+  background:
+    radial-gradient(
+      120% 90% at 50% 50%,
+      transparent 42%,
+      rgba(0, 0, 0, 0.42) 78%,
+      rgba(0, 0, 0, 0.72) 100%
+    ),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, transparent 22%);
+}
+
+/* Static film grain. Screen blend so it reads as light on a black plate.
+   Deliberately not animated — repainting noise every frame is a real cost and
+   a still grain is what a photographed plate actually looks like. */
+.stage-grain {
+  opacity: 0.04;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* Keep the artwork from being lifted out by drag or long-press. iOS shows its
+   own save sheet on long-press, which `touch-callout` is the only way to stop.
+   A deterrent only — the frames are still ordinary cached JPEGs. */
+canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Scroll cue — a slow breathe, not a bounce. */
+.cue-line {
+  animation: cue-breathe 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes cue-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue-line {
+    animation: none;
+  }
+  html {
+    scroll-snap-type: none;
+  }
+}
+
