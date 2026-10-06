@@ -1,8 +1,4 @@
-// Shared by the opening headline and the closing statement so the two are
-// typographically identical — they bookend the film and should read as the
-// same voice.
-const HEADLINE_TYPE =
-  'text-[2.15rem] leading-[1.02] font-medium tracking-[-0.045em] text-white sm:text-[2rem] lg:text-[3.4rem] max-w-[30rem]'
+import { HEADLINE_TYPE } from '../sequence/stageText'
 
 // Narration takes turns in a single slot, in seconds from the start of a loop
 // cycle. `at` is the entry point, `hold` how long the line rests at full
@@ -21,7 +17,7 @@ const NARRATION = [
   // Lands as the camera finishes opening and rests through the pause. Set at
   // headline scale — it is the closing statement, not a passing caption.
   {
-    text: 'Every component,  where it belongs.',
+    text: 'Built for the moments that matter.',
     at: 11.4,
     hold: 7.2,
     rule: true,
@@ -71,12 +67,11 @@ export default function Narration() {
         style={{ opacity: 0 }}
       >
         <p className="mb-3 font-mono text-[10px] tracking-[0.24em] text-white/40 uppercase">
-          Stage 01 — Exploded view
+          SnapSeek
         </p>
         <span className="mb-4 ml-auto block h-px w-10 bg-white/20" />
         <p className="text-[13px] leading-relaxed text-white/55">
-          A complete disassembly of the EOS R5 body and RF lens, in one
-          continuous take.
+          Find yourself in thousands of event photographs, in seconds.
         </p>
       </div>
 
