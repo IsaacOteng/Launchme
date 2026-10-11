@@ -1,76 +1,106 @@
-import { useLayoutEffect, useRef } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import CanvasBackdrop from './components/CanvasBackdrop'
-
-gsap.registerPlugin(ScrollTrigger)
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  CAMERA_FRAMES,
+  CAPTURE_FRAMES,
+  REPLICATION_FRAMES,
+  selectFrames,
+} from './sequence/frames'
+import { useFrameLoader } from './sequence/useFrameLoader'
+import CameraStage from './components/CameraStage'
+import CaptureStage from './components/CaptureStage'
+import ReplicationStage from './components/ReplicationStage'
+import StoryStack from './components/StoryStack'
+import Nav from './components/Nav'
+import Preloader from './components/Preloader'
 
 function App() {
-  const heroRef = useRef(null)
-  const sectionRef = useRef(null)
+  const cameraFrames = useMemo(() => selectFrames(CAMERA_FRAMES), [])
+  const captureFrames = useMemo(() => selectFrames(CAPTURE_FRAMES), [])
+  const replicationFrames = useMemo(() => selectFrames(REPLICATION_FRAMES), [])
 
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from('.hero-anim', {
-        y: 40,
-        opacity: 0,
-        duration: 1,
-        stagger: 0.12,
-        ease: 'power3.out',
-      })
+  // Staged loading, in story order. The preloader gates on the opening
+  // sequence alone — making it wait for every stage would put ~18MB in front
+  // of the first frame. Each later stage streams in behind the one before it,
+  // so bandwidth always goes to whatever the viewer reaches next.
+  const camera = useFrameLoader(cameraFrames)
+  const capture = useFrameLoader(captureFrames, { defer: !camera.ready })
+  const replication = useFrameLoader(replicationFrames, { defer: !capture.ready })
 
-      gsap.from('.reveal', {
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 80%',
-        },
-        y: 60,
-        opacity: 0,
-        duration: 0.9,
-        stagger: 0.15,
-        ease: 'power3.out',
-      })
-    }, heroRef)
-
-    return () => ctx.revert()
+  // Which stacked layers have been revealed. Latched, so scrolling back up
+  // does not rewind a stage that has already told its part of the story.
+  const [playing, setPlaying] = useState({})
+  const handleReveal = useCallback((index) => {
+    setPlaying((prev) => (prev[index] ? prev : { ...prev, [index]: true }))
   }, [])
 
+  // Suppress the context menu over the artwork. This is a deterrent, not
+  // protection — the frames are plain JPEGs at known URLs and sit in the
+  // network tab and disk cache regardless. It only removes the one-click path.
+  useEffect(() => {
+    const block = (e) => {
+      if (!e.target.closest('a, input, textarea, [data-allow-menu]')) {
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('contextmenu', block)
+    return () => document.removeEventListener('contextmenu', block)
+  }, [])
+
+  // Every stage after the opening lives in one sticky viewport, each wiping
+  // over the last rather than scrolling in from underneath.
+  const layers = useMemo(
+    () => [
+      {
+        key: 'capture',
+        render: (shouldPlay) => (
+          <CaptureStage
+            imagesRef={capture.imagesRef}
+            frameCount={captureFrames.length}
+            ready={capture.ready}
+            shouldPlay={shouldPlay}
+          />
+        ),
+      },
+      {
+        key: 'replication',
+        render: (shouldPlay) => (
+          <ReplicationStage
+            imagesRef={replication.imagesRef}
+            frameCount={replicationFrames.length}
+            ready={replication.ready}
+            shouldPlay={shouldPlay}
+          />
+        ),
+      },
+    ],
+    // `useFrameLoader` returns a fresh object each render, so the loaders
+    // themselves are not valid deps — the refs are stable and `ready` is a
+    // boolean, which is all that actually affects what gets rendered.
+    [
+      capture.imagesRef,
+      capture.ready,
+      captureFrames.length,
+      replication.imagesRef,
+      replication.ready,
+      replicationFrames.length,
+    ],
+  )
+
   return (
-    <div ref={heroRef} className="relative min-h-svh w-full">
-      <CanvasBackdrop />
+    <>
+      <Preloader progress={camera.progress} ready={camera.ready} />
 
-      <main className="relative z-10 mx-auto flex min-h-svh w-full max-w-5xl flex-col items-center justify-center px-6 text-center">
-        <p className="hero-anim mb-4 text-sm tracking-[0.3em] text-purple-300 uppercase">
-          Launchme
-        </p>
-        <h1 className="hero-anim text-4xl font-medium tracking-tight text-white sm:text-6xl">
-          Environment ready.
-        </h1>
-        <p className="hero-anim mt-4 max-w-xl text-base text-gray-400 sm:text-lg">
-          React + Vite, Tailwind CSS, GSAP with ScrollTrigger, and an HTML5
-          canvas backdrop — all wired up and mobile-first.
-        </p>
-      </main>
+      {/* Fixed above every stage — the story changes underneath it. */}
+      <Nav show={camera.ready} />
 
-      <section
-        ref={sectionRef}
-        className="relative z-10 mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 px-6 py-24 sm:grid-cols-3"
-      >
-        {['React + Vite', 'GSAP ScrollTrigger', 'Tailwind CSS'].map(
-          (label) => (
-            <div
-              key={label}
-              className="reveal rounded-2xl border border-white/10 bg-white/5 p-8 text-left backdrop-blur"
-            >
-              <h2 className="text-lg font-medium text-white">{label}</h2>
-              <p className="mt-2 text-sm text-gray-400">
-                Scroll to see this card animate in.
-              </p>
-            </div>
-          ),
-        )}
-      </section>
-    </div>
+      <CameraStage
+        imagesRef={camera.imagesRef}
+        frameCount={cameraFrames.length}
+        active={camera.ready}
+      />
+
+      <StoryStack layers={layers} playing={playing} onReveal={handleReveal} />
+    </>
   )
 }
 
