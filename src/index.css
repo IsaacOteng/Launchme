@@ -28,16 +28,14 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Each stage is exactly one viewport, so the page advances a whole scene at a
-   time rather than parking between two. Snapping lives on the scroll container
-   (html), not body, or Safari ignores it. */
+/* The opening stage is one viewport and should be landed on cleanly, but the
+   story stack below it is several viewports of scrubbed reveal. `proximity`
+   gives the first the crisp page feel without yanking the viewer out of a
+   half-finished wipe — `mandatory` fights the scrub. Snapping lives on the
+   scroll container (html), not body, or Safari ignores it. */
 html {
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
 }
-
-/* Stage transitions that pin and scrub will be taller than a viewport, at
-   which point mandatory snapping has to give way — set `scroll-snap-align:
-   none` on those sections rather than removing this. */
 
 /* Optical falloff. Keeps the plate from ending in a hard rectangle and pulls
    the eye to the centre of the composition. */
