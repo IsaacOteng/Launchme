@@ -13,7 +13,7 @@ import Narration from './Narration'
 // photograph. INTRO runs once before the loop so the title lands over a still
 // camera rather than one already coming apart.
 const INTRO = 2.4
-const PLAY = 11
+const PLAY = 7
 const HOLD = 10
 
 // Cycle landmarks, in seconds from the start of a loop.

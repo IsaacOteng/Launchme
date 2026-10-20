@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * Preloads the full frame sequence before the experience is allowed to start.
+ * Preloads a frame sequence before its stage is allowed to play.
  *
- * Images are held in a ref — never in React state — so scrubbing never touches
+ * Images are held in a ref — never in React state — so playback never touches
  * the React render path. Progress is reported coarsely (whole percent) to keep
  * the loader itself cheap.
+ *
+ * `defer` holds the sequence back so later stages don't compete with the
+ * opening one for bandwidth: the hero gates on its own frames only, and the
+ * rest stream in behind it while the viewer is watching.
  */
-export function useFrameLoader(urls, concurrency = 8) {
+export function useFrameLoader(urls, { concurrency = 8, defer = false } = {}) {
   const imagesRef = useRef([])
   const [progress, setProgress] = useState(0)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    if (defer) return
     let cancelled = false
     const images = new Array(urls.length)
     imagesRef.current = images
@@ -62,7 +67,7 @@ export function useFrameLoader(urls, concurrency = 8) {
     return () => {
       cancelled = true
     }
-  }, [urls, concurrency])
+  }, [urls, concurrency, defer])
 
   return { imagesRef, progress, ready }
 }
